@@ -1,1 +1,966 @@
-يتم اياقافه
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Termin — لوحة تحكم المحفظة</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Tajawal:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg: #070b0f;
+    --surface: #0d1117;
+    --card: #111820;
+    --border: #1c2733;
+    --accent: #00d4ff;
+    --accent2: #00ff88;
+    --danger: #ff4444;
+    --warn: #ffaa00;
+    --text: #e8edf2;
+    --muted: #4a6070;
+    --font: 'Tajawal', sans-serif;
+    --mono: 'IBM Plex Mono', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+
+  /* ── Header ── */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 20px 0;
+    margin-bottom: 40px;
+    background: rgba(7,11,15,0.8);
+    backdrop-filter: blur(10px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .header-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+
+  .logo-text {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+
+  .logo-text span { color: var(--accent); }
+
+  .status-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    font-size: 13px;
+    font-family: var(--mono);
+  }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: background 0.3s;
+  }
+
+  .status-dot.connected { background: var(--accent2); box-shadow: 0 0 8px var(--accent2); }
+
+  /* ── Login Screen ── */
+  #login-screen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 80vh;
+  }
+
+  .login-box {
+    width: 100%;
+    max-width: 420px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .login-box::before {
+    content: '';
+    position: absolute;
+    top: -1px; left: 20%; right: 20%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  }
+
+  .login-title {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+
+  .login-sub {
+    color: var(--muted);
+    font-size: 13px;
+    text-align: center;
+    margin-bottom: 32px;
+    font-family: var(--mono);
+  }
+
+  /* ── Form Elements ── */
+  .field { margin-bottom: 16px; }
+
+  label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  input, select {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    direction: ltr;
+    text-align: left;
+  }
+
+  input:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,212,255,0.1);
+  }
+
+  select option { background: var(--surface); }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    font-family: var(--font);
+    font-size: 15px;
+    font-weight: 600;
+    transition: all 0.2s;
+    width: 100%;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #000;
+  }
+
+  .btn-primary:hover { background: #00b8d9; transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-success {
+    background: var(--accent2);
+    color: #000;
+  }
+
+  .btn-success:hover { background: #00d975; }
+
+  .btn-danger {
+    background: rgba(255,68,68,0.15);
+    color: var(--danger);
+    border: 1px solid rgba(255,68,68,0.3);
+  }
+
+  .btn-danger:hover { background: rgba(255,68,68,0.25); }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    width: auto;
+    padding: 8px 18px;
+    font-size: 13px;
+  }
+
+  .btn-outline:hover { background: rgba(0,212,255,0.1); }
+
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+  /* ── Main Dashboard ── */
+  #dashboard { display: none; }
+
+  /* ── Stats Row ── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .stat-card:hover { border-color: var(--accent); }
+
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 60px; height: 60px;
+    border-radius: 0 14px 0 60px;
+    opacity: 0.1;
+  }
+
+  .stat-card.blue::after { background: var(--accent); }
+  .stat-card.green::after { background: var(--accent2); }
+  .stat-card.warn::after { background: var(--warn); }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+
+  .stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    font-family: var(--mono);
+  }
+
+  .stat-card.blue .stat-value { color: var(--accent); }
+  .stat-card.green .stat-value { color: var(--accent2); }
+  .stat-card.warn .stat-value { color: var(--warn); }
+
+  /* ── Two Column ── */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 32px;
+  }
+
+  @media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* ── Panel ── */
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .panel-title {
+    font-size: 15px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-title .icon {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+
+  .icon-blue { background: rgba(0,212,255,0.15); }
+  .icon-green { background: rgba(0,255,136,0.15); }
+  .icon-warn { background: rgba(255,170,0,0.15); }
+
+  .panel-body { padding: 24px; }
+
+  /* ── User Search ── */
+  .search-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .search-row input { flex: 1; }
+  .search-row .btn { width: auto; padding: 12px 20px; white-space: nowrap; }
+
+  /* ── User Card ── */
+  .user-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .user-card:hover { border-color: var(--accent); background: rgba(0,212,255,0.03); }
+  .user-card.selected { border-color: var(--accent); background: rgba(0,212,255,0.06); }
+
+  .user-avatar {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+    color: #000;
+    flex-shrink: 0;
+  }
+
+  .user-info { flex: 1; min-width: 0; }
+
+  .user-name {
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .user-username {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: var(--mono);
+    direction: ltr;
+    text-align: right;
+  }
+
+  .user-id {
+    font-size: 10px;
+    color: var(--muted);
+    font-family: var(--mono);
+    direction: ltr;
+  }
+
+  /* ── Credit Form ── */
+  .credit-form { display: none; }
+  .credit-form.visible { display: block; }
+
+  .selected-user-banner {
+    background: rgba(0,212,255,0.08);
+    border: 1px solid rgba(0,212,255,0.3);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .coin-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  @media (max-width: 480px) { .coin-grid { grid-template-columns: repeat(2, 1fr); } }
+
+  .coin-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    color: var(--text);
+    font-family: var(--font);
+  }
+
+  .coin-btn:hover { border-color: var(--accent); }
+  .coin-btn.active { border-color: var(--accent); background: rgba(0,212,255,0.1); }
+
+  .coin-btn .c-icon { font-size: 18px; margin-bottom: 4px; }
+  .coin-btn .c-name { font-size: 11px; font-family: var(--mono); color: var(--muted); }
+
+  /* ── Transaction List ── */
+  .tx-list { max-height: 400px; overflow-y: auto; }
+
+  .tx-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .tx-item:last-child { border-bottom: none; }
+
+  .tx-type {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .tx-type.credit { background: rgba(0,255,136,0.1); }
+  .tx-type.debit { background: rgba(255,68,68,0.1); }
+
+  .tx-info { flex: 1; min-width: 0; }
+
+  .tx-user {
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tx-time {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+
+  .tx-amount {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 600;
+    text-align: left;
+    direction: ltr;
+  }
+
+  .tx-amount.credit { color: var(--accent2); }
+  .tx-amount.debit { color: var(--danger); }
+
+  /* ── Alert ── */
+  .alert {
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    margin-bottom: 16px;
+    display: none;
+  }
+
+  .alert.success { background: rgba(0,255,136,0.1); border: 1px solid rgba(0,255,136,0.3); color: var(--accent2); }
+  .alert.error { background: rgba(255,68,68,0.1); border: 1px solid rgba(255,68,68,0.3); color: var(--danger); }
+  .alert.visible { display: block; }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  /* ── Loading ── */
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(0,0,0,0.3);
+    border-top-color: #000;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    display: inline-block;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Fade in ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .fade-up { animation: fadeUp 0.4s ease forwards; }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+    font-size: 13px;
+    font-family: var(--mono);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon">📡</div>
+      <div class="logo-text">Termin <span>Admin</span></div>
+    </div>
+    <div class="status-badge">
+      <div class="status-dot" id="status-dot"></div>
+      <span id="status-text">غير متصل</span>
+    </div>
+  </div>
+</header>
+
+<!-- ══ LOGIN ══ -->
+<div id="login-screen">
+  <div class="container">
+    <div class="login-box fade-up">
+      <div class="login-title">🔐 تسجيل دخول المالك</div>
+      <div class="login-sub">ADMIN PANEL · TERMIN WALLET</div>
+
+      <div class="field">
+        <label>Supabase URL</label>
+        <input id="sb-url" type="text" placeholder="https://xxxx.supabase.co" />
+      </div>
+      <div class="field">
+        <label>Supabase Anon Key</label>
+        <input id="sb-key" type="password" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." />
+      </div>
+      <div class="field">
+        <label>كلمة مرور المالك</label>
+        <input id="admin-pass" type="password" placeholder="••••••••" />
+      </div>
+
+      <div class="alert" id="login-alert"></div>
+
+      <button class="btn btn-primary" onclick="doLogin()">
+        <span id="login-btn-text">دخول</span>
+      </button>
+
+      <div style="margin-top:16px; font-size:11px; color:var(--muted); text-align:center; font-family:var(--mono);">
+        كلمة المرور تُحفظ محلياً في المتصفح فقط
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ DASHBOARD ══ -->
+<div id="dashboard">
+  <div class="container">
+
+    <!-- Stats -->
+    <div class="stats-row fade-up">
+      <div class="stat-card blue">
+        <div class="stat-label">إجمالي المستخدمين</div>
+        <div class="stat-value" id="stat-users">—</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-label">العمليات اليوم</div>
+        <div class="stat-value" id="stat-tx-today">—</div>
+      </div>
+      <div class="stat-card warn">
+        <div class="stat-label">إجمالي العمليات</div>
+        <div class="stat-value" id="stat-tx-total">—</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+
+      <!-- ══ Left: Credit Panel ══ -->
+      <div>
+        <div class="panel fade-up">
+          <div class="panel-header">
+            <div class="panel-title">
+              <div class="icon icon-blue">💳</div>
+              إضافة رصيد للمستخدم
+            </div>
+          </div>
+          <div class="panel-body">
+
+            <!-- Search -->
+            <div class="search-row">
+              <input id="search-input" type="text" placeholder="ابحث باسم المستخدم أو الاسم..." onkeyup="searchUsers()" />
+            </div>
+
+            <div id="user-list">
+              <div class="empty-state">ابحث عن مستخدم للبدء</div>
+            </div>
+
+            <!-- Credit Form -->
+            <div class="credit-form" id="credit-form">
+              <div class="selected-user-banner">
+                <div style="font-size:20px" id="sel-avatar">👤</div>
+                <div>
+                  <div style="font-weight:600" id="sel-name">—</div>
+                  <div style="font-size:11px; color:var(--muted); font-family:var(--mono)" id="sel-username">—</div>
+                </div>
+                <button class="btn btn-outline" style="margin-right:auto; margin-left:0" onclick="clearSelected()">تغيير</button>
+              </div>
+
+              <label>العملة</label>
+              <div class="coin-grid" id="coin-grid"></div>
+
+              <div class="field">
+                <label>المبلغ</label>
+                <input id="amount-input" type="number" placeholder="0.00" min="0" step="0.000001" />
+              </div>
+
+              <div class="field">
+                <label>ملاحظة (اختياري)</label>
+                <input id="note-input" type="text" placeholder="سبب الإضافة..." style="direction:rtl; text-align:right" />
+              </div>
+
+              <div class="alert" id="credit-alert"></div>
+
+              <button class="btn btn-success" id="credit-btn" onclick="addCredit()">
+                <span id="credit-btn-text">✅ إضافة الرصيد</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ Right: Transaction Log ══ -->
+      <div>
+        <div class="panel fade-up">
+          <div class="panel-header">
+            <div class="panel-title">
+              <div class="icon icon-green">📋</div>
+              سجل العمليات
+            </div>
+            <button class="btn btn-outline" onclick="loadTransactions()">تحديث</button>
+          </div>
+          <div class="panel-body" style="padding:16px">
+            <div class="tx-list" id="tx-list">
+              <div class="empty-state">جارٍ التحميل...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ══ Config ══
+const ADMIN_PASSWORD = 'termin_admin_2024'; // غيّريها!
+const COINS = [
+  { symbol: 'BTC',  name: 'Bitcoin',  icon: '₿' },
+  { symbol: 'ETH',  name: 'Ethereum', icon: 'Ξ' },
+  { symbol: 'BNB',  name: 'BNB',      icon: 'Ƀ' },
+  { symbol: 'TRX',  name: 'Tron',     icon: 'T' },
+  { symbol: 'LTC',  name: 'Litecoin', icon: 'Ł' },
+  { symbol: 'DOGE', name: 'Dogecoin', icon: 'Ð' },
+  { symbol: 'XRP',  name: 'XRP',      icon: 'X' },
+  { symbol: 'SOL',  name: 'Solana',   icon: 'S' },
+];
+
+let sb = null;
+let selectedUser = null;
+let selectedCoin = 'BTC';
+let allUsers = [];
+
+// ══ Login ══
+async function doLogin() {
+  const url = document.getElementById('sb-url').value.trim();
+  const key = document.getElementById('sb-key').value.trim();
+  const pass = document.getElementById('admin-pass').value;
+  const alert = document.getElementById('login-alert');
+
+  if (!url || !key) { showAlert(alert, 'أدخل Supabase URL و Key', 'error'); return; }
+  if (pass !== ADMIN_PASSWORD) { showAlert(alert, 'كلمة مرور المالك خاطئة', 'error'); return; }
+
+  document.getElementById('login-btn-text').innerHTML = '<div class="spinner"></div>';
+
+  try {
+    sb = supabase.createClient(url, key);
+    const { data, error } = await sb.from('profiles').select('id').limit(1);
+    if (error) throw error;
+
+    localStorage.setItem('termin_sb_url', url);
+    localStorage.setItem('termin_sb_key', key);
+
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    document.getElementById('status-dot').classList.add('connected');
+    document.getElementById('status-text').textContent = 'متصل';
+
+    buildCoinGrid();
+    loadStats();
+    loadTransactions();
+    loadAllUsers();
+  } catch (e) {
+    showAlert(alert, 'فشل الاتصال: ' + e.message, 'error');
+    document.getElementById('login-btn-text').textContent = 'دخول';
+  }
+}
+
+// ══ Auto-login ══
+window.addEventListener('load', () => {
+  const url = localStorage.getItem('termin_sb_url');
+  const key = localStorage.getItem('termin_sb_key');
+  if (url && key) {
+    document.getElementById('sb-url').value = url;
+    document.getElementById('sb-key').value = key;
+  }
+});
+
+// ══ Coin Grid ══
+function buildCoinGrid() {
+  const grid = document.getElementById('coin-grid');
+  grid.innerHTML = COINS.map(c => `
+    <button class="coin-btn ${c.symbol === selectedCoin ? 'active' : ''}"
+      onclick="selectCoin('${c.symbol}', this)">
+      <div class="c-icon">${c.icon}</div>
+      <div class="c-name">${c.symbol}</div>
+    </button>
+  `).join('');
+}
+
+function selectCoin(symbol, el) {
+  selectedCoin = symbol;
+  document.querySelectorAll('.coin-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ══ Load All Users ══
+async function loadAllUsers() {
+  const { data } = await sb.from('profiles')
+    .select('id, username, display_name, avatar_url')
+    .neq('username', 'termin')
+    .order('display_name');
+  allUsers = data || [];
+}
+
+// ══ Search Users ══
+async function searchUsers() {
+  const q = document.getElementById('search-input').value.trim().toLowerCase();
+  const list = document.getElementById('user-list');
+
+  if (q.length < 1) {
+    list.innerHTML = '<div class="empty-state">ابحث عن مستخدم للبدء</div>';
+    return;
+  }
+
+  const filtered = allUsers.filter(u =>
+    (u.display_name || '').toLowerCase().includes(q) ||
+    (u.username || '').toLowerCase().includes(q)
+  );
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="empty-state">لا توجد نتائج</div>';
+    return;
+  }
+
+  list.innerHTML = filtered.slice(0, 8).map(u => `
+    <div class="user-card" onclick="selectUser('${u.id}', '${escHtml(u.display_name || '')}', '${escHtml(u.username || '')}')">
+      <div class="user-avatar">${(u.display_name || '?')[0].toUpperCase()}</div>
+      <div class="user-info">
+        <div class="user-name">${escHtml(u.display_name || 'مستخدم')}</div>
+        <div class="user-username">@${escHtml(u.username || '')}</div>
+        <div class="user-id">${u.id.substring(0, 16)}...</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ══ Select User ══
+function selectUser(id, name, username) {
+  selectedUser = { id, name, username };
+  document.getElementById('sel-name').textContent = name;
+  document.getElementById('sel-username').textContent = '@' + username;
+  document.getElementById('sel-avatar').textContent = name[0]?.toUpperCase() || '?';
+  document.getElementById('credit-form').classList.add('visible');
+  document.getElementById('user-list').style.display = 'none';
+  document.getElementById('search-input').style.display = 'none';
+}
+
+function clearSelected() {
+  selectedUser = null;
+  document.getElementById('credit-form').classList.remove('visible');
+  document.getElementById('user-list').style.display = 'block';
+  document.getElementById('search-input').style.display = 'block';
+  document.getElementById('user-list').innerHTML = '<div class="empty-state">ابحث عن مستخدم للبدء</div>';
+  document.getElementById('search-input').value = '';
+  document.getElementById('amount-input').value = '';
+  document.getElementById('note-input').value = '';
+}
+
+// ══ Add Credit ══
+async function addCredit() {
+  if (!selectedUser) return;
+  const amount = parseFloat(document.getElementById('amount-input').value);
+  const note = document.getElementById('note-input').value.trim();
+  const alert = document.getElementById('credit-alert');
+
+  if (!amount || amount <= 0) { showAlert(alert, 'أدخل مبلغاً صحيحاً', 'error'); return; }
+
+  const btn = document.getElementById('credit-btn');
+  btn.disabled = true;
+  document.getElementById('credit-btn-text').innerHTML = '<div class="spinner"></div> جارٍ الإضافة...';
+
+  try {
+    // upsert الرصيد
+    const { data: existing } = await sb.from('wallet_balances')
+      .select('balance')
+      .eq('user_id', selectedUser.id)
+      .eq('symbol', selectedCoin)
+      .maybeSingle();
+
+    const newBalance = (existing?.balance || 0) + amount;
+
+    await sb.from('wallet_balances').upsert({
+      user_id: selectedUser.id,
+      symbol: selectedCoin,
+      balance: newBalance,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id,symbol' });
+
+    // سجل العملية
+    await sb.from('wallet_transactions').insert({
+      user_id: selectedUser.id,
+      symbol: selectedCoin,
+      amount: amount,
+      type: 'credit',
+      note: note || 'إضافة من المالك',
+    });
+
+    showAlert(alert, `✅ تم إضافة ${amount} ${selectedCoin} لـ ${selectedUser.name}`, 'success');
+    document.getElementById('amount-input').value = '';
+    document.getElementById('note-input').value = '';
+    loadStats();
+    loadTransactions();
+  } catch (e) {
+    showAlert(alert, 'خطأ: ' + e.message, 'error');
+  }
+
+  btn.disabled = false;
+  document.getElementById('credit-btn-text').textContent = '✅ إضافة الرصيد';
+}
+
+// ══ Load Stats ══
+async function loadStats() {
+  const { count: userCount } = await sb.from('profiles')
+    .select('*', { count: 'exact', head: true });
+  document.getElementById('stat-users').textContent = userCount || 0;
+
+  const { count: totalTx } = await sb.from('wallet_transactions')
+    .select('*', { count: 'exact', head: true });
+  document.getElementById('stat-tx-total').textContent = totalTx || 0;
+
+  const today = new Date().toISOString().split('T')[0];
+  const { count: todayTx } = await sb.from('wallet_transactions')
+    .select('*', { count: 'exact', head: true })
+    .gte('created_at', today);
+  document.getElementById('stat-tx-today').textContent = todayTx || 0;
+}
+
+// ══ Load Transactions ══
+async function loadTransactions() {
+  const { data } = await sb.from('wallet_transactions')
+    .select('*, profiles(display_name, username)')
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  const list = document.getElementById('tx-list');
+  if (!data || data.length === 0) {
+    list.innerHTML = '<div class="empty-state">لا توجد عمليات بعد</div>';
+    return;
+  }
+
+  list.innerHTML = data.map(tx => {
+    const name = tx.profiles?.display_name || 'مستخدم';
+    const time = new Date(tx.created_at).toLocaleString('ar');
+    const isCredit = tx.type === 'credit';
+    return `
+      <div class="tx-item">
+        <div class="tx-type ${isCredit ? 'credit' : 'debit'}">
+          ${isCredit ? '⬆️' : '⬇️'}
+        </div>
+        <div class="tx-info">
+          <div class="tx-user">${escHtml(name)}</div>
+          <div class="tx-time">${time}</div>
+          ${tx.note ? `<div style="font-size:11px;color:var(--muted)">${escHtml(tx.note)}</div>` : ''}
+        </div>
+        <div class="tx-amount ${isCredit ? 'credit' : 'debit'}">
+          ${isCredit ? '+' : '-'}${tx.amount} ${tx.symbol}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ══ Helpers ══
+function showAlert(el, msg, type) {
+  el.textContent = msg;
+  el.className = `alert ${type} visible`;
+  setTimeout(() => el.classList.remove('visible'), 4000);
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
